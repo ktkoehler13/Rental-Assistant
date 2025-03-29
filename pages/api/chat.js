@@ -1,54 +1,48 @@
+// pages/api/chat.js
 
-import OpenAI from "openai";
+import { OpenAI } from "openai";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-export default async function handler(req, res) {
-  const { messages } = req.body;
+const SYSTEM_PROMPT = `You are Rental Assistant Pro, a helpful assistant for tenants renting from Koehler Properties in Ithaca, NY.
 
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ reply: "Missing OpenAI API key." });
+You use the lease terms, Ithaca City Code §258, and NY State landlord-tenant laws to answer questions. Be specific, cite sections of the lease when relevant, and maintain a friendly, helpful tone.
+
+Lease Key Points:
+- Pets: Not allowed unless tenant gets written permission. A pet fee applies, and renters insurance + pet addendum is required.
+- Subletting: Must get landlord's written permission. Unauthorized sublets are a lease violation.
+- Repairs: Tenants should report issues. Landlord handles repairs within a reasonable time unless caused by tenant.
+- ESA: Emotional support animals are allowed with proper documentation, even if pets are otherwise restricted.
+- Rent: Due on the 1st of each month. Late fees may apply if not paid by the 5th.
+- Guests: Allowed but must not create disturbances. No long-term guests without permission.
+- Lease renewal: Typically requires 60 days' notice. 
+- Any rules not specified should follow Ithaca City Code §258 or NY State law.
+
+Always be clear, reference the lease or law when possible, and invite the tenant to follow up.`;
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const { messages } = req.body;
+
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
       messages: [
-        {
-          role: "system",
-          content: `You are Rental Assistant Pro, the official AI assistant for Koehler Properties.
-
-Your job is to help tenants understand their lease, responsibilities, and rights clearly, kindly, and accurately.
-
-Your answers must reflect the terms of the lease (summarized below), Ithaca City Code §258, and New York State tenant laws, especially the Housing Stability and Tenant Protection Act of 2019.
-
-You should cite lease sections where applicable. Do NOT speculate or give legal advice.
-
-Here is the relevant lease summary:
-
-- Section 6(A): The landlord supplies key appliances, including the refrigerator, stove, and smoke detectors.
-- Section 13(B): Tenants must notify the landlord in writing about necessary repairs and allow a reasonable time for them to be addressed.
-- Section 14: The landlord is responsible for maintaining the premises, including the structure and major systems, unless damage is caused by the tenant.
-- Section 9: Tenants must not allow damage to the unit and are liable for any caused by negligence or misuse.
-- Section 17: Tenants may not sublet or assign the apartment without written permission from the landlord.
-- Section 18: Guests may stay for up to 10 consecutive days or 15 days total in a month unless otherwise approved.
-- Section 21: Rent is due monthly; late fees apply if more than 5 days late.
-- Section 26: Lease renewals and move-out procedures are outlined, including notice periods.
-
-Base your responses on these terms first. If tenant-specific info is needed (like rent or dates), say: "Please enter your full name exactly as it appears on your lease and I can look it up."
-
-Only answer questions relevant to rental housing and tenant issues.`
-        },
-        ...messages
+        { role: "system", content: SYSTEM_PROMPT },
+        ...messages,
       ],
-      temperature: 0.7
+      temperature: 0.7,
     });
 
-    res.status(200).json({ reply: completion.choices[0].message.content });
+    const reply = response.choices?.[0]?.message?.content || "Sorry, I wasn't able to generate a response.";
+    res.status(200).json({ reply });
   } catch (error) {
     console.error("OpenAI error:", error);
-    res.status(500).json({ reply: "Something went wrong with the assistant." });
+    res.status(500).json({ error: "Unable to get a response." });
   }
 }
