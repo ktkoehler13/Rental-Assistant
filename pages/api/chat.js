@@ -6,43 +6,42 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are Rental Assistant Pro, a helpful assistant for tenants renting from Koehler Properties in Ithaca, NY.
-
-You use the lease terms, Ithaca City Code §258, and NY State landlord-tenant laws to answer questions. Be specific, cite sections of the lease when relevant, and maintain a friendly, helpful tone.
-
-Lease Key Points:
-- Pets: Not allowed unless tenant gets written permission. A pet fee applies, and renters insurance + pet addendum is required.
-- Subletting: Must get landlord's written permission. Unauthorized sublets are a lease violation.
-- Repairs: Tenants should report issues. Landlord handles repairs within a reasonable time unless caused by tenant. If a tenant reports a maintenance issue, you should also offer helpful, practical mitigation tips when appropriate — such as turning off a leaking water valve, using towels to prevent damage, ventilating areas with mold, or basic pest deterrents. Make clear these are temporary suggestions and the landlord should still be contacted.
-- ESA: Emotional support animals are allowed with proper documentation, even if pets are otherwise restricted.
-- Rent: Due on the 1st of each month. Late fees may apply if not paid by the 5th.
-- Guests: Allowed but must not create disturbances. No long-term guests without permission.
-- Lease renewal: Typically requires 60 days' notice. 
-- Any rules not specified should follow Ithaca City Code §258 or NY State law.
-
-Always be clear, reference the lease or law when possible, and invite the tenant to follow up.`;
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { messages } = req.body;
+  const { message } = req.body;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...messages,
-      ],
-      temperature: 0.7,
+    // Step 1: Create a thread
+    const thread = await openai.beta.threads.create();
+
+    // Step 2: Add user message to thread
+    await openai.beta.threads.messages.create(thread.id, {
+      role: "user",
+      content: message,
     });
 
-    const reply = response.choices?.[0]?.message?.content || "Sorry, I wasn't able to generate a response.";
-    res.status(200).json({ reply });
+    // Step 3: Run the assistant
+    const run = await openai.beta.threads.runs.create(thread.id, {
+      assistant_id: "asst_5KR4b69UdfTUh0phUvvNeMpR",
+    });
+
+    // Step 4: Wait for completion
+    let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    while (runStatus.status !== "completed") {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    }
+
+    // Step 5: Retrieve assistant's reply
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    const assistantMessage = messages.data.find(m => m.role === "assistant");
+
+    res.status(200).json({ reply: assistantMessage?.content[0]?.text?.value || "No response received." });
   } catch (error) {
-    console.error("OpenAI error:", error);
-    res.status(500).json({ error: "Unable to get a response." });
+    console.error("Error communicating with Assistant:", error);
+    res.status(500).json({ error: "Failed to get assistant response" });
   }
 }
