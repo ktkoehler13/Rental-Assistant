@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
   try {
     const useGPT35 = shouldUseGPT35(message);
-    const model = useGPT35 ? "gpt-3.5-turbo" : "gpt-4";
+    const model = useGPT35 ? "gpt-3.5-turbo" : "gpt-4-1106-preview";
 
     const thread = await openai.beta.threads.create();
 
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     const startTime = Date.now();
     let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
     while (runStatus.status !== "completed") {
-      await new Promise((resolve) => setTimeout(resolve, 500));  // faster polling
+      await new Promise((resolve) => setTimeout(resolve, 500));
       runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
       if (Date.now() - startTime > 30000) {
         return res.status(504).json({ error: "Request timed out waiting for assistant response." });
