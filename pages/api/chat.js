@@ -6,6 +6,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Lightweight keyword check for switching to GPT-3.5
+function shouldUseGPT35(message) {
+  const simpleTriggers = ['hi', 'hello', 'who are you', 'help', 'thanks', 'how do I', 'what is'];
+  return message.length < 100 && simpleTriggers.some(trigger => message.toLowerCase().includes(trigger));
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -18,6 +24,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    const useGPT35 = shouldUseGPT35(message);
+    const model = useGPT35 ? "gpt-3.5-turbo" : "gpt-4";
+
     const thread = await openai.beta.threads.create();
 
     await openai.beta.threads.messages.create(thread.id, {
@@ -27,15 +36,15 @@ export default async function handler(req, res) {
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: "asst_5KR4b69UdfTUh0phUvvNeMpR",
+      model,
     });
 
-    // Add timeout limit (20 seconds max)
     const startTime = Date.now();
     let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
     while (runStatus.status !== "completed") {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 500));  // faster polling
       runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-      if (Date.now() - startTime > 20000) {
+      if (Date.now() - startTime > 30000) {
         return res.status(504).json({ error: "Request timed out waiting for assistant response." });
       }
     }
