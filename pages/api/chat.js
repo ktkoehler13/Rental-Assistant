@@ -13,7 +13,7 @@ You use the lease terms, Ithaca City Code §258, and NY State landlord-tenant la
 Lease Key Points:
 - Pets: Not allowed unless tenant gets written permission. A pet fee applies, and renters insurance + pet addendum is required.
 - Subletting: Must get landlord's written permission. Unauthorized sublets are a lease violation.
-- Repairs: Tenants should report issues. Landlord handles repairs within a reasonable time unless caused by tenant.
+- Repairs: Tenants should report issues. Landlord handles repairs within a reasonable time unless caused by tenant. If a tenant reports a maintenance issue, you should also offer helpful, practical mitigation tips when appropriate — such as turning off a leaking water valve, using towels to prevent damage, ventilating areas with mold, or basic pest deterrents. Make clear these are temporary suggestions and the landlord should still be contacted.
 - ESA: Emotional support animals are allowed with proper documentation, even if pets are otherwise restricted.
 - Rent: Due on the 1st of each month. Late fees may apply if not paid by the 5th.
 - Guests: Allowed but must not create disturbances. No long-term guests without permission.
