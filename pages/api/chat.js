@@ -17,10 +17,10 @@ export default async function handler(req, res) {
     // Step 1: Create a thread
     const thread = await openai.beta.threads.create();
 
-    // Step 2: Add user message to thread
+    // Step 2: Add user message to thread with proper format
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
-      content: message,
+      content: [{ type: "text", text: message }],
     });
 
     // Step 3: Run the assistant
@@ -39,7 +39,9 @@ export default async function handler(req, res) {
     const messages = await openai.beta.threads.messages.list(thread.id);
     const assistantMessage = messages.data.find(m => m.role === "assistant");
 
-    res.status(200).json({ reply: assistantMessage?.content[0]?.text?.value || "No response received." });
+    res.status(200).json({
+      reply: assistantMessage?.content[0]?.text?.value || "No response received.",
+    });
   } catch (error) {
     console.error("Error communicating with Assistant:", error);
     res.status(500).json({ error: "Failed to get assistant response" });
